@@ -207,26 +207,18 @@ bool HandleEvent(SDL_Event *Event)
             // NOTE: In the windows version, we used "if (IsDown != WasDown)"
             // to detect key repeats. SDL has the 'repeat' value, though,
             // which we'll use.
-            #define updn(u,d,v) else if(KeyCode == SDLK_##a) { v *= 1.2; } else if(KeyCode == SDLK_##d) { v /= 1.2; }
+            #define updn(u,d,v) else if(KeyCode == SDLK_##u) { v *= 1.2; } else if(KeyCode == SDLK_##d) { v /= 1.2; }
             if (Event->key.repeat == 0)
             {
                 if (KeyCode == 0) { }
-                else if(KeyCode == SDLK_q) { centers[0] *= 1.2; } else if(KeyCode == SDLK_w) { centers[0] /= 1.2; }
-                else if(KeyCode == SDLK_a)
-                {
-                }
-                else if(KeyCode == SDLK_s)
-                {
-                }
-                else if(KeyCode == SDLK_d)
-                {
-                }
-                else if(KeyCode == SDLK_q)
-                {
-                }
-                else if(KeyCode == SDLK_e)
-                {
-                }
+                updn(q,a,centers[0])
+                updn(w,s,centers[1])
+                updn(e,d,centers[2])
+                updn(r,f,centers[3])
+                updn(t,g,volumes[0])
+                updn(y,h,volumes[1])
+                updn(u,j,volumes[2])
+                updn(i,k,volumes[3])
                 else if(KeyCode == SDLK_UP)
                 {
                     HalfSquareWavePeriod++;
@@ -265,6 +257,9 @@ bool HandleEvent(SDL_Event *Event)
                 ShouldQuit = true;
             }
 
+            printf("c0: %.3f c1: %.3f c2:%.3f c3: %.3f v0: %.3f v1: %.3f v2: %.3f v3: %.3f\n",
+                centers[0], centers[1], centers[2], centers[3],
+                volumes[0], volumes[1], volumes[2], volumes[3]);
         } break;
 
         case SDL_WINDOWEVENT:
@@ -350,7 +345,7 @@ void update_oscilator(char* name, float* args)
 
     if (channel != -1)
     {
-        printf("UOSC: %d %f %f %f %f\n", channel, args[0], args[1], args[2], args[3]);
+        //printf("UOSC: %d %f %f %f %f\n", channel, args[0], args[1], args[2], args[3]);
 
         osc_config[channel][0] /= 2;
         osc_config[channel][1] /= 2;
