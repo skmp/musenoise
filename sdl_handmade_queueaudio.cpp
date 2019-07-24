@@ -19,6 +19,10 @@
 #define PORT     5001 
 #define MAXLINE 4096 
 
+float centers[4] = { 10, 1.75, 72, 5.5 };
+float volumes[4] = { 2, 5, 0.5, 3 };
+
+
 int sockfd; 
     unsigned char buffer[MAXLINE]; 
     char *hello = "Hello from server"; 
@@ -203,11 +207,11 @@ bool HandleEvent(SDL_Event *Event)
             // NOTE: In the windows version, we used "if (IsDown != WasDown)"
             // to detect key repeats. SDL has the 'repeat' value, though,
             // which we'll use.
+            #define updn(u,d,v) else if(KeyCode == SDLK_##a) { v *= 1.2; } else if(KeyCode == SDLK_##d) { v /= 1.2; }
             if (Event->key.repeat == 0)
             {
-                if(KeyCode == SDLK_w)
-                {
-                }
+                if (KeyCode == 0) { }
+                else if(KeyCode == SDLK_q) { centers[0] *= 1.2; } else if(KeyCode == SDLK_w) { centers[0] /= 1.2; }
                 else if(KeyCode == SDLK_a)
                 {
                 }
@@ -581,8 +585,6 @@ int main(int argc, char *argv[])
                         //a , d, g, t
                         // a:8-12, d: 0.5 - 3, g 32-100, t: 4-7
                         // 
-                        float centers[4] = { 10, 1.75, 72, 5.5 };
-                        float volumes[4] = { 2, 5, 0.5, 3 };
                         
                         for (int ch=0; ch<4; ch++)
                         {
