@@ -16,17 +16,21 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 
-#define PORT     5001 
+#include <cmath>
+
+#define PORT     5000 
 #define MAXLINE 4096 
 
-float centers[4] = { 10, 1.75, 72, 5.5 };
-float volumes[4] = { 2, 5, 0.5, 3 };
+//c0: 1.615 c1: 0.407 c2:3.894 c3: 1.279 v0: 8.600 v1: 824.223 v2: 1523.859 v3: 115.013
+
+float centers[4] = { 1.615, 0.407, 3.894, 1.279 };
+float volumes[4] = { 8.6, 824.223, 1523.859, 115.013 };
 
 
 int sockfd; 
     unsigned char buffer[MAXLINE]; 
     char *hello = "Hello from server"; 
-    struct sockaddr_in servaddr, cliaddr; 
+    struct sockaddr_in servaddr, cliaddr, fwdaddr; 
 
 int HalfSquareWavePeriod;
 
@@ -333,12 +337,15 @@ SDLCloseGameControllers()
     }
 }
 
+float alpha_scales[4];
+
 void update_oscilator(char* name, float* args)
 {
     //a, d, t, g
     int channel = -1;
 
-    if (name[15] == 'a') channel = 0;
+    if (name[15] == 'a') channel = -1;
+    if (name[15] == 'b') channel = 0;
     if (name[15] == 'd') channel = 1;
     if (name[15] == 't') channel = 2;
     if (name[15] == 'g') channel = 3;
@@ -352,10 +359,14 @@ void update_oscilator(char* name, float* args)
         osc_config[channel][2] /= 2;
         osc_config[channel][3] /= 2;
 
-        osc_config[channel][0] += args[0]/2;
-        osc_config[channel][1] += args[1]/2;
-        osc_config[channel][2] += args[2]/2;
-        osc_config[channel][3] += args[3]/2;
+        osc_config[channel][0] += args[0]/2 / alpha_scales[0] *args[0]/2;
+        osc_config[channel][1] += args[1]/2 / alpha_scales[1] *args[1]/2;
+        osc_config[channel][2] += args[2]/2 / alpha_scales[2] *args[2]/2;
+        osc_config[channel][3] += args[3]/2 / alpha_scales[3] *args[3]/2;
+    }
+    else 
+    {
+        memcpy(alpha_scales, args, sizeof(alpha_scales));
     }
 }
 
@@ -369,12 +380,19 @@ int main(int argc, char *argv[])
       
     memset(&servaddr, 0, sizeof(servaddr)); 
     memset(&cliaddr, 0, sizeof(cliaddr)); 
+    memset(&fwdaddr, 0, sizeof(fwdaddr)); 
       
     // Filling server information 
     servaddr.sin_family    = AF_INET; // IPv4 
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
     servaddr.sin_port = htons(PORT); 
+    
+    fwdaddr.sin_family    = AF_INET; // IPv4 
+    fwdaddr.sin_addr.s_addr = inet_addr("192.168.43.187");; 
+    fwdaddr.sin_port = htons(PORT); 
       
+      
+
     // Bind the socket with the server address 
     if ( bind(sockfd, (const struct sockaddr *)&servaddr,  
             sizeof(servaddr)) < 0 ) 
@@ -483,8 +501,12 @@ int main(int argc, char *argv[])
                                 MSG_DONTWAIT, ( struct sockaddr *) &cliaddr, 
                                 &len);
 
+
                     if (n >0)
                     {
+
+                        sendto(sockfd, (char*)buffer, n, 0, ( struct sockaddr *) &fwdaddr, sizeof(fwdaddr));
+
                     buffer[n] = '\0'; 
 
                     unsigned char* in = buffer + 16;
@@ -585,7 +607,7 @@ int main(int argc, char *argv[])
                         {
                             for (int fg = 0; fg < 4; fg++)
                             {
-                                auto period = HalfSquareWavePeriod/(centers[fg] * (8.5f+fg)/10);
+                                auto period = (1+osc_config[ch][fg]/32) * HalfSquareWavePeriod/(centers[fg] * (8.5f+fg)/10);
 
                                 auto tone = osc_config[ch][fg] * ToneVolume * volumes[ch];
 
@@ -596,10 +618,15 @@ int main(int argc, char *argv[])
                         
                         SampleValue /= 32;
 
-                        if (SampleValue > 32000)
-                            SampleValue = 32000;
-                        else if (SampleValue < -32000)
-                            SampleValue = -32000;
+                        if (SampleValue > 30000)
+                            SampleValue = 30000 + SampleValue / 1000;
+                        else if (SampleValue < -30000)
+                            SampleValue = -30000 + SampleValue / 1000;
+
+                        static auto oldSample = SampleValue;
+
+                        SampleValue = SampleValue * 0.1 + oldSample * 0.9;
+                        oldSample = SampleValue;
 
                         RunningSampleIndex++;
                         *SampleOut++ = SampleValue;
